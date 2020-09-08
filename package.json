@@ -1,0 +1,15 @@
+{
+  "name": "anak-balancier",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Alexey Yaroshevich <zxqfox@gmail.com>",
+  "license": "MPL-2.0",
+  "description": "",
+  "devDependencies": {
+    "typescript": "4.0.2"
+  }
+}
