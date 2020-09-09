@@ -11,5 +11,8 @@
   "description": "",
   "devDependencies": {
     "typescript": "4.0.2"
+  },
+  "dependencies": {
+    "tslib": "2.0.1"
   }
 }

@@ -1,21 +1,55 @@
-export enum Role {
-  maintank,
-  offtank,
-  heal,
-  lightheal,
-  hitscan,
-  projectile,
-  flex,
-}
+import { Player, Role, PlayerRoles } from '../types';
 
-export type PlayerRoles = Map<Role, number>;
+const shorties = {
+  [Role.unknown]: 'u',
+  [Role.offtank]: 't',
+  [Role.maintank]: 'o',
+  [Role.heal]: 's',
+  [Role.lightheal]: 'l',
+  [Role.hitscan]: 'h',
+  [Role.projectile]: 'p',
+  [Role.flex]: 'f',
+};
 
-export interface Player {
-  id: string
-  name: string
-  btag: string
-  apitag: string
-  roles: PlayerRoles
+export class CPlayer implements Player {
+  id: string;
+  name: string;
+  btag: string;
+  // apitag: string;
+  roles: PlayerRoles;
+
+  constructor(id: string, name: string, btag: string, roles: PlayerRoles) {
+    this.id = id;
+    this.name = name;
+    this.btag = btag;
+    this.roles = roles;
+  }
+
+  get mainRank(): number {
+    const rank = this.roles.get(this.main)!;
+    return rank < 1000 ? 0 : rank;
+  }
+
+  get flexRank(): number {
+    return this.roles.get(Role.flex)!;
+  }
+
+  get r(): string {
+    return shorties[this.main] + Math.floor(this.rank / 100);
+  }
+
+  get rank(): number {
+    return this.mainRank || this.flexRank;
+  }
+
+  get main(): Role {
+    const role = this.roles.keys().next().value;
+    if (!role) {
+      throw new Error(`Player ${this.name} has no roles.`);
+    }
+
+    return role;
+  }
 }
 
 export const people = parse(`
@@ -84,7 +118,7 @@ Getrush#2894	getrush_7	dd	dd	0	0	4112
 Gigabidd#2788	gigabidq	tank	support	2750	0	0
 goodimp#2660	GoodImp	tank	flex	1650	0	0
 Hendo#21647	grim_moose	support	tank	1999	1860	0
-HEYD#21717	heydthis	flex	flex	3150	3230	3050
+HEYD#21717	heydthis	tank	dd	3150	3230	3050
 hiegirsis#2198	Hiegirsiss	tank	dd	2350	0	1870
 himukkee#2315	himukkee	dd	support	0	0	2650
 Honoka#21889	honokawitch	support	flex	0	2600	2380
@@ -95,7 +129,7 @@ IsMyLovE#2724	kromus22	tank	dd	2222	0	0
 jed1master#2662	Jed1Master	dd	support	0	0	3031
 JonSnow#22990	jessard	dd	support	0	3011	2671
 JUSTJ#21122	Tyopliy_Stan	support	dd	0	2421	0
-Justy#21844	justy_xd	flex	dd	3399	3490	3501
+Justy#21844	justy_xd	tank	dd	3399	3490	3501
 Karin#21315	Karin_Pride	dd	flex	3211	2933	2634
 Karnage#22778	admiralkarnage	support	dd	0	0	2420
 Kars#21831	dvoretzkiysebas	tank	flex	4070	0	0
@@ -189,26 +223,13 @@ zubermann#2460	megapupkin	support	tank	2520	2600	0
 Паныч#2776	Panblch	dd	support	0	0	2400
 `);
 
-function parse(str: string): Player[] {
-  const rows = str.split(/\n/).map(s => s.trim()).filter(Boolean);
-  return rows.map(row => parseRow(row));
-}
-
-function parseRow(line: string): Player {
-  const [btag, name, ...roleStrings] = line.split(/\t/);
-  const roles = parseRoles(roleStrings);
-  const id = btag.replace('#', '-');
-  const apitag = `http://owapi.io/profile/pc/eu/${id}`;
-  return { id, name, btag, apitag, roles };
-}
-
 function parseRoles([role1, role2, ...ranksStrings]: string[]): PlayerRoles {
   const result = new Map();
   const ranks = ranksStrings.map(Number);
   const [tank, sup, dd] = ranks.map(rank => rank || null);
   const flex = avg(...ranks.filter(Boolean));
 
-  for (const role of [role1, role2]) {
+  for (const role of [role1, role2, 'flex']) {
     if (role === 'flex') {
       result.set(Role.flex, flex);
     } else if (role === 'tank') {
@@ -226,6 +247,19 @@ function parseRoles([role1, role2, ...ranksStrings]: string[]): PlayerRoles {
   }
 
   return result;
+}
+
+function parse(str: string): Player[] {
+  const rows = str.split(/\n/).map(s => s.trim()).filter(Boolean);
+  return rows.map(row => parseRow(row));
+}
+
+function parseRow(line: string): Player {
+  const [btag, name, ...roleStrings] = line.split(/\t/);
+  const roles = parseRoles(roleStrings);
+  const id = btag.replace('#', '-');
+  // const apitag = `http://owapi.io/profile/pc/eu/${id}`;
+  return new CPlayer(id, name, btag, roles);
 }
 
 function avg(...ranks: number[]) {
